@@ -1,0 +1,12 @@
+Option Explicit
+
+
+Function IfBlank(x As Variant, y As Variant)
+    
+    If x = "" Or x = 0 Then
+        IfBlank = y
+    Else
+        IfBlank = x
+    End If
+    
+End Function
