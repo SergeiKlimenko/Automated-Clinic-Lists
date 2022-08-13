@@ -1,0 +1,152 @@
+Option Explicit
+
+
+Sub ExtractMRNs()
+
+    Dim oFSO As Object
+    Dim oFolder As Object
+    Dim oFile As Object
+    Dim i As Integer
+    Dim getDrName As Boolean
+    Dim getClinicDate As Boolean
+    Dim getMRN As Boolean
+    Dim getPerson As Boolean
+    Dim getDateOfBirth As Boolean
+    Dim getSex As Boolean
+    Dim database As ListObject
+    Dim getMissingData As Boolean
+    
+    Dim DrName As String
+    Dim clinicDate As Variant
+    Dim FirstName As String
+    Dim MRN As String
+    Dim LastName As String
+    Dim Sex As String
+    Dim DateOfBirth As Variant
+    
+    Dim yr As Integer
+    Dim mo As Integer
+    Dim dy As Integer
+    
+    Set oFSO = CreateObject("Scripting.FileSystemObject")
+    Set oFolder = oFSO.GetFolder("L:\Files\Haematology\Data Manager Folder - Adult Haemoglobinopathy\Sergei\Clinic lists\new clinic lists")
+    Set database = ActiveSheet.ListObjects("Clinic_List")
+    
+    If database.DataBodyRange.Rows.Count = 1 Then
+        i = 1
+    Else
+        i = database.DataBodyRange.Rows.Count + 2
+    End If
+    
+    For Each oFile In oFolder.Files
+        
+        If Right(oFile.Name, 3) = "txt" Then
+            
+            Dim fileTextStream
+            Set fileTextStream = oFile.OpenAsTextStream(1)
+            
+            Do While fileTextStream.AtEndofStream <> True
+                    
+                Dim line As String
+                line = fileTextStream.readline
+
+                If getDrName = True Then
+                    'Get Dr Name
+                    If InStr(line, "RJ") <> 0 Then
+                        DrName = "Dr" & Mid(Right(line, Len(line) - 1), InStr(Right(line, Len(line) - 1), " "), InStr(Right(line, Len(line) - 1), ",") - 5)
+                    Else
+                        DrName = "Dr" & " " & Mid(Right(line, Len(line) - 1), 2, InStr(line, ",") - 3)
+                    End If
+                    getDrName = False
+                ElseIf getClinicDate = True Then
+                    'Get Clinic Date
+                    clinicDate = Mid(line, InStr(line, "(") + 1, InStr(line, ")") - InStr(line, "(") - 1)
+                    yr = Year(clinicDate)
+                    mo = Month(clinicDate)
+                    dy = Day(clinicDate)
+                    clinicDate = DateSerial(yr, mo, dy)
+                    getClinicDate = False
+                ElseIf getMRN = True Then
+                    'Get MRN
+                    MRN = Mid(line, InStr(line, "(") + 1, 7)
+                    database.ListRows.Add
+                    Cells(i + 1, 3) = MRN
+                    Cells(i + 1, 14) = DrName
+                    getMRN = False
+                    getMissingData = False
+                    
+                    Cells(i + 1, 1).Formula2 = "=INDEX('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[#Data],MATCH(IF(ISBLANK([@[HOSPITAL NUMBER]]),"""",""*""&[@[HOSPITAL NUMBER]]&""*""),TEXT('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[Hospital Number],0),0),2)"
+                    Cells(i + 1, 2).Formula2 = "=INDEX('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[#Data],MATCH(IF(ISBLANK([@[HOSPITAL NUMBER]]),"""",""*""&[@[HOSPITAL NUMBER]]&""*""),TEXT('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[Hospital Number],0),0),1)"
+                    Cells(i + 1, 4).Formula2 = "=IF(ISNA([@[review date]]),""new patient"",IF([@[review date]]+1=1,""no review"",IF([@[review date]]=[@[Clinic date]],""just reviewed"",[@[review date]])))"
+                    'Cells(i + 1, 5).Formula2 = "=INDEX('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[#Data],MATCH(IF(ISBLANK([@[HOSPITAL NUMBER]]),"""",""*""&[@[HOSPITAL NUMBER]]&""*""),TEXT('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[Hospital Number],0),0),12)"
+                    Cells(i + 1, 5).Formula2 = "=IfBlank(IFNA(IFNA(INDEX('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[#Data],MATCH(IF(ISBLANK([@[HOSPITAL NUMBER]]),"""",""*""&[@[HOSPITAL NUMBER]]&""*""),TEXT('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[Hospital Number],0),0),12)," & _
+                        "INDEX('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Transfusion_patients[#Data],MATCH(IF(ISBLANK([@[HOSPITAL NUMBER]]),"""",""*""&[@[HOSPITAL NUMBER]]&""*""),TEXT('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Transfusion_patients[Hospital Number],0),0),12)),""""), " & _
+                        "IFNA(INDEX('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[#Data],MATCH(IF(ISBLANK([@[HOSPITAL NUMBER]]),"""",""*""&[@[HOSPITAL NUMBER]]&""*""),TEXT('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[Hospital Number],0),0),14), " & _
+                        "INDEX('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Transfusion_patients[#Data],MATCH(IF(ISBLANK([@[HOSPITAL NUMBER]]),"""",""*""&[@[HOSPITAL NUMBER]]&""*""),TEXT('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Transfusion_patients[Hospital Number],0),0),14)))"
+                        
+                        
+                    Cells(i + 1, 7).Formula2 = "=INDEX('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[#Data],MATCH(IF(ISBLANK([@[HOSPITAL NUMBER]]),"""",""*""&[@[HOSPITAL NUMBER]]&""*""),TEXT('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[Hospital Number],0),0),16)"
+                    Cells(i + 1, 8).Formula2 = "=INDEX('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[#Data],MATCH(""*""&[@[HOSPITAL NUMBER]]&""*"",TEXT('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[Hospital Number],0),0),8)"
+                    Cells(i + 1, 9).Formula2 = "=INDEX('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[#Data],MATCH(""*""&[@[HOSPITAL NUMBER]]&""*"",TEXT('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[Hospital Number],0),0),7)"
+                    Cells(i + 1, 10).Formula2 = "=INDEX('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[#Data],MATCH(IF(ISBLANK([@[HOSPITAL NUMBER]]),"""",""*""&[@[HOSPITAL NUMBER]]&""*""),TEXT('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[Hospital Number],0),0),4)"
+                    Cells(i + 1, 11).Formula2 = "=INDEX('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[#Data],MATCH(IF(ISBLANK([@[HOSPITAL NUMBER]]),"""",""*""&[@[HOSPITAL NUMBER]]&""*""),TEXT('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[Hospital Number],0),0),6)"
+                    Cells(i + 1, 12).Formula2 = "=INDEX('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[#Data],MATCH(IF(ISBLANK([@[HOSPITAL NUMBER]]),"""",""*""&[@[HOSPITAL NUMBER]]&""*""),TEXT('Adult haemoglobinopathy spreadsheet_Sarah June 2017-.xlsm'!Database[Hospital Number],0),0),5)"
+                    Cells(i + 1, 13) = clinicDate
+                    
+                    If TypeName(Cells(i + 1, 1).Value) = "Error" Then
+                        If Cells(i + 1, 1) = CVErr(xlErrNA) Then
+                            getMissingData = True
+                        End If
+                    Else
+                        i = i + 1
+                        Sex = ""
+                    End If
+                    
+                ElseIf getPerson = True Then
+                    'Get first name & last name
+                    LastName = StrConv(Mid(line, InStr(line, "(") + 1, InStr(line, ", ") - InStr(line, "(") - 1), vbProperCase)
+                    FirstName = StrConv(Mid(line, InStr(line, ", ") + 2, InStr(line, ")") - InStr(line, ", ") - 2), vbProperCase)
+                    getPerson = False
+                ElseIf getDateOfBirth = True Then
+                    'Get date of birth
+                    DateOfBirth = Mid(line, InStr(line, "(") + 1, InStr(line, ")") - InStr(line, "(") - 1)
+                    yr = Year(DateOfBirth)
+                    mo = Month(DateOfBirth)
+                    dy = Day(DateOfBirth)
+                    DateOfBirth = DateSerial(yr, mo, dy)
+                    getDateOfBirth = False
+                ElseIf getSex = True Then
+                    Sex = Mid(line, InStr(line, "(") + 1, InStr(line, ")") - InStr(line, "(") - 1)
+                    getSex = False
+                End If
+                
+                If getMissingData = True And Sex <> "" Then
+                    Cells(i + 1, 2) = FirstName
+                    Cells(i + 1, 1) = LastName
+                    Cells(i + 1, 12) = DateOfBirth
+                    Cells(i + 1, 11) = Sex
+                    Sex = ""
+                    i = i + 1
+                End If
+                
+                If InStr(line, "(Resource: )") > 1 Then
+                    getDrName = True
+                ElseIf InStr(line, "(Date: )") > 1 Then
+                    getClinicDate = True
+                ElseIf InStr(line, "(MRN: )") > 1 Then
+                    getMRN = True
+                ElseIf InStr(line, "(Person: )") > 1 Then
+                    getPerson = True
+                ElseIf InStr(line, "(DOB: )") > 1 Then
+                    getDateOfBirth = True
+                ElseIf getMissingData = True And InStr(line, "(Sex: )") > 1 Then
+                    getSex = True
+                End If
+                
+            Loop
+    
+        End If
+                
+    Next
+        
+End Sub
